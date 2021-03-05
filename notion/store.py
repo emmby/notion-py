@@ -330,6 +330,8 @@ class RecordStore(object):
                 "spaceId": space_id
             },
             "loader": {
+                "limit": limit,
+                "loadContentCover": True,
                 "reducers": {
                     "collection_group_results": {
                         "type": "results",
