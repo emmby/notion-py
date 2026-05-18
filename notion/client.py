@@ -97,14 +97,13 @@ class NotionClient(object):
     def start_monitoring(self):
         self._monitor.poll_async()
     
-    def _fetch_guest_space_data(self, records):
+    def _fetch_space_data(self, records, space_id):
         """
         guest users have an empty `space` dict, so get the space_id from the `space_view` dict instead,
         and fetch the space data from the getPublicSpaceData endpoint.
 
         Note: This mutates the records dict
         """
-        space_id = list(records["space_view"].values())[0]["value"]["space_id"]
 
         space_data = self.post(
             "getPublicSpaceData", {"type": "space-ids", "spaceIds": [space_id]}
@@ -124,8 +123,17 @@ class NotionClient(object):
 
     def _update_user_info(self):
         records = self.post("loadUserContent", {}).json()["recordMap"]
-        if not records["space"]:
-            self._fetch_guest_space_data(records)
+        user_id = list(records["notion_user"].keys())[0]
+        # Handle both old {"value": {...data}} and new {"value": {"value": {...data}, "role": "..."}} formats
+        space_id = None
+        if user_id in records.get("user_root", {}):
+            user_root_val = records["user_root"][user_id].get("value", {})
+            if isinstance(user_root_val, dict) and "value" in user_root_val and isinstance(user_root_val["value"], dict):
+                user_root_val = user_root_val["value"]
+            space_view_pointers = user_root_val.get("space_view_pointers", [])
+            if space_view_pointers:
+                space_id = space_view_pointers[0].get("spaceId")
+        self._fetch_space_data(records, space_id)
 
         self._store.store_recordmap(records)
         self.current_user = self.get_user(list(records["notion_user"].keys())[0])
