@@ -294,8 +294,13 @@ class RecordStore(object):
             for id, record in records.items():
                 if not isinstance(record, dict):
                     continue
+                
+                val = record.get("value")
+                if isinstance(val, dict) and "value" in val and "role" in val:
+                    val = val["value"]
+                    
                 self._update_record(
-                    table, id, value=record.get("value"), role=record.get("role")
+                    table, id, value=val, role=record.get("role")
                 )
 
     def call_query_collection(
